@@ -4,7 +4,7 @@ mod dither;
 
 use dotenv::dotenv;
 use ed25519_dalek::VerifyingKey;
-use reqwest::header::{HeaderMap, CONTENT_TYPE};
+use reqwest::{header::{HeaderMap, CONTENT_TYPE}, Client};
 //use reqwest::header::{HeaderMap, AUTHORIZATION};
 use std::{env, convert::Infallible, str, io::Cursor, sync::mpsc::{self, Sender}};
 use warp::{http::{StatusCode, header::HeaderValue}, Filter, reject::{Rejection, reject}, reply::{Reply, self},
@@ -149,6 +149,15 @@ async fn get_body(body: Bytes) -> Result<discord_structs::DiscordPing, Rejection
     }
 }
 
+fn failed_reply(client: &Client, application_id: &String, token: String) {
+    let post_url = format!("https://discord.com/api/v10/webhooks/{}/{}/messages/@original",application_id,token);
+    let responce = client.patch(post_url);
+    let mut body = HashMap::new();
+    body.insert("content", "something went wrong processing image");
+    let _ = responce.json(&body).send();
+    
+}
+
 #[tokio::main]
 async fn main() {
     //loads the values from the .env file
@@ -171,9 +180,6 @@ async fn main() {
 
     tokio::spawn(async move {
         let client = reqwest::ClientBuilder::new();
-        //let mut headers = HeaderMap::new();
-        //let val = format!("Bot {}", auth_token).parse().unwrap();
-        //headers.insert(AUTHORIZATION, val);
         let client = client.build().expect("failed to create client");
 
         loop {
@@ -184,6 +190,7 @@ async fn main() {
                 Ok(v) => v,
                 _ => {
                     println!("failed to get image");
+                    failed_reply(&client,&application_id,token);
                     continue;
                 }
             };
@@ -191,6 +198,7 @@ async fn main() {
                 Ok(v) => v,
                 _ => {
                     println!("unable to get image bytes");
+                    failed_reply(&client,&application_id,token);
                     continue;
                 },
             };
@@ -200,6 +208,7 @@ async fn main() {
                 Ok(r) => r,
                 _ => {
                     println!("failed to create image reaeder");
+                    failed_reply(&client,&application_id,token);
                     continue;
                 },
             };
@@ -207,6 +216,7 @@ async fn main() {
                 Ok(r) => r,
                 _ => {
                     println!("unable to decode image");
+                    failed_reply(&client,&application_id,token);
                     continue;
                 },
             };
@@ -218,6 +228,7 @@ async fn main() {
                 Some(r) => r,
                 _ => {
                     println!("failed to get mutiable refference to image");
+                    failed_reply(&client,&application_id,token);
                     continue;
                 },
             };
