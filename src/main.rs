@@ -224,9 +224,10 @@ async fn main() {
             dither::dither(image_reader, 4);
             let full_image = image_small_reader.resize(original_width, original_height, image::imageops::FilterType::Nearest);
             let filename = format!("image_{}.png",token);
+            let image_path = format!("image/{}",filename);
             let mut image_cursor = Cursor::new(Vec::new());
             let _ = full_image.write_to(&mut image_cursor,ImageFormat::Png);
-            let _ = full_image.save(filename.clone());
+            let _ = full_image.save(image_path);
             println!("I Have recived recived and processed image");
             let post_url = format!("https://discord.com/api/v10/webhooks/{}/{}/messages/@original",application_id,token);
             println!("{}",post_url);
